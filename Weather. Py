@@ -1,0 +1,81 @@
+import requests
+
+BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"
+
+
+def get_weather(city: str, api_key: str) -> dict:
+    """Current weather fetch karta hai."""
+    params = {
+        "q": city,
+        "appid": api_key,
+        "units": "metric",
+        "lang": "en",
+    }
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    return response.json()
+
+
+def get_forecast(city: str, api_key: str) -> dict:
+    """5-day forecast fetch karta hai."""
+    params = {
+        "q": city,
+        "appid": api_key,
+        "units": "metric",
+        "lang": "en",
+    }
+    response = requests.get(FORECAST_URL, params=params, timeout=10)
+    return response.json()
+
+
+def format_weather(data: dict) -> str:
+    """Weather data ko readable format mein convert karta hai."""
+    if data.get("cod") != 200:
+        return f"❌ Error: {data.get('message', 'City nahi mila!')}"
+
+    name = data["name"]
+    country = data["sys"]["country"]
+    temp = data["main"]["temp"]
+    feels = data["main"]["feels_like"]
+    humidity = data["main"]["humidity"]
+    wind = data["wind"]["speed"]
+    desc = data["weather"][0]["description"].capitalize()
+    visibility = data.get("visibility", 0) // 1000  # km mein
+
+    return (
+        f"\n{'='*35}\n"
+        f"📍  {name}, {country}\n"
+        f"{'='*35}\n"
+        f"🌤️   {desc}\n"
+        f"🌡️   Temperature : {temp}°C\n"
+        f"🤔  Feels Like  : {feels}°C\n"
+        f"💧  Humidity    : {humidity}%\n"
+        f"💨  Wind Speed  : {wind} m/s\n"
+        f"👁️   Visibility  : {visibility} km\n"
+        f"{'='*35}\n"
+    )
+
+
+def format_forecast(data: dict) -> str:
+    """5-day forecast ko readable format mein convert karta hai."""
+    if data.get("cod") != "200":
+        return f"❌ Error: {data.get('message', 'Forecast nahi mila!')}"
+
+    city = data["city"]["name"]
+    country = data["city"]["country"]
+    output = f"\n📅  5-Day Forecast — {city}, {country}\n{'='*40}\n"
+
+    seen_dates = []
+    for item in data["list"]:
+        date = item["dt_txt"].split(" ")[0]
+        time = item["dt_txt"].split(" ")[1]
+
+        if date not in seen_dates and time == "12:00:00":
+            seen_dates.append(date)
+            temp = item["main"]["temp"]
+            desc = item["weather"][0]["description"].capitalize()
+            humidity = item["main"]["humidity"]
+            output += f"📆  {date}  |  {temp}°C  |  {desc}  |  💧{humidity}%\n"
+
+    output += "=" * 40
+    return output
